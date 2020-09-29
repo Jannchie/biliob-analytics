@@ -17,8 +17,7 @@ async function getFansRate() {
   let count = 0;
   let result = [];
   let startTime = new Date().getTime();
-  // await async.eachLimit(_.take(midList, 20), 4, async (mid) => {
-  await async.eachLimit(midList, 4, async (mid) => {
+  await async.eachLimit(midList, 16, async (mid) => {
     let data = await adl.loadDataByMid(mid);
     let inter = int.getInter(
       data,
@@ -30,7 +29,7 @@ async function getFansRate() {
     result.push(info);
     count = progress(count, startTime, len);
   });
-  let ctx = "mid,name,date,value\n";
+  let ctx = "mid,name,date,value,total\n";
   let cDate = startDate.getTime();
   let midSet = new Set();
   while (cDate < endDate.getTime()) {
@@ -48,9 +47,10 @@ async function getFansRate() {
       let id = eachData.mid;
       let dt = d3.timeFormat("%Y-%m-%d")(cDate);
       let d = eachData.value;
+      let total = eachData.data(cDate);
       let name = eachData.name;
       midSet.add(eachData.mid);
-      ctx += `"${id}","${name}","${dt}","${d}"\n`;
+      ctx += `"${id}","${name}","${dt}","${d}","${total}"\n`;
     }
     cDate += 86400 * 1000 * deltaDay;
   }
@@ -86,7 +86,7 @@ function progress(count, startTime, len) {
   let speed = count / (runTime / 1000);
   let remain = len - count;
   let remainTime = remain / speed;
-  if (count % 100 == 0) {
+  if (count % 10 == 0) {
     console.log(
       `Current: ${count}/${len}, Remain: ${remainTime.toFixed(2)}seconds`
     );

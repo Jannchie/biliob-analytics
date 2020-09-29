@@ -1,6 +1,12 @@
 const getClient = require("./db");
 class AuthorDataLoader {
   async loader(mid, collectionName, one) {
+    let hint;
+    if (collectionName == "author") {
+      hint = "mid_1";
+    } else {
+      hint = "idx_mid_datetime";
+    }
     let client = await getClient();
     let coll = client.db("biliob").collection(collectionName);
     let data;
