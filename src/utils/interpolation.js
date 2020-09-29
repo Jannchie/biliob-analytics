@@ -18,11 +18,8 @@ class Interpolation {
       console.log(data[0].mid);
       inter = d3
         .scaleLinear()
-        .domain(
-          _.concat([0], valueList),
-          _.concat([new Date(zero - 86400000)], dateList)
-        )
-        .range(valueList)
+        .domain(_.concat([new Date(zero - 86400000)], dateList))
+        .range(_.concat([0], valueList))
         .clamp(true)
         .interpolate(d3.interpolateRound);
     }
