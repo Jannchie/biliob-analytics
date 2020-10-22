@@ -1,8 +1,10 @@
-const url = "mongodb://localhost:27017";
+let URL = process.env.BILIOB_MONGO_URL;
 const MongoClient = require("mongodb").MongoClient;
 
-async function getClient() {
-  const client = MongoClient.connect(url, { useUnifiedTopology: true });
+async function getClient(url = URL) {
+  const client = MongoClient.connect("mongodb://localhost:2000", {
+    useUnifiedTopology: true,
+  });
   return await client;
 }
 

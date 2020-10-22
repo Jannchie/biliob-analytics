@@ -7,17 +7,26 @@ const adl = require("./utils/author-data-loader");
 const int = require("./utils/interpolation");
 
 async function getFansRate() {
-  let startDate = new Date("2020-01-01");
-  let endDate = new Date();
-  let deltaDay = 1;
+  let dataPath = "./fans-decrease-data.csv";
+  let metaPath = "./fans-decrease-meta.csv";
+  // 变化率统计范围
+  let dayDelta = 1;
+  // 每组数据的间隔
+  let deltaDay = 0.25;
+  let sort = "asc";
+
+  let startDate = Date.UTC(2020, 8, 16);
+  // let startDate = new Date(+new Date() - 86400 * 1000 * 7);
+
+  let endDate = Date.UTC(2020, 9, 16);
   mf.startDate = startDate;
   mf.endDate = endDate;
-  let midList = await mf.listTopRateAuthorByDay();
+  let midList = await mf.listTopRateAuthorByDay(sort);
   let len = midList.length;
   let count = 0;
   let result = [];
   let startTime = new Date().getTime();
-  await async.eachLimit(midList, 16, async (mid) => {
+  await async.eachOfLimit(midList, 4, async (mid) => {
     let data = await adl.loadDataByMid(mid);
     let inter = int.getInter(
       data,
@@ -25,27 +34,30 @@ async function getFansRate() {
       (d) => d.fans
     );
     let info = await adl.loadInfoByMid(mid);
+    if (info == null) {
+      console.log(mid);
+    }
     info.data = inter;
     result.push(info);
     count = progress(count, startTime, len);
   });
   let ctx = "mid,name,date,value,total\n";
-  let cDate = startDate.getTime();
+  let cDate = startDate;
   let midSet = new Set();
-  while (cDate < endDate.getTime()) {
+  while (cDate < endDate) {
     let data = _(result)
       .map((d) => {
-        d.value = d.data(cDate) - d.data(cDate - 86400 * 1000 * 30);
+        d.value = d.data(cDate) - d.data(cDate - 86400 * 1000 * dayDelta);
         return d;
       })
       .orderBy(function (a) {
         return a.value;
-      }, "desc")
+      }, sort)
       .take(25)
       .value();
     for (let eachData of data) {
       let id = eachData.mid;
-      let dt = d3.timeFormat("%Y-%m-%d")(cDate);
+      let dt = d3.timeFormat("%Y-%m-%d %H:%M")(cDate);
       let d = eachData.value;
       let total = eachData.data(cDate);
       let name = eachData.name;
@@ -54,7 +66,7 @@ async function getFansRate() {
     }
     cDate += 86400 * 1000 * deltaDay;
   }
-  let metaCtx = `id,name,image,channel\n`;
+  let metaCtx = `mid,name,image,channel,official\n`;
   for (let data of result) {
     if (midSet.has(data.mid)) {
       let img = data.face;
@@ -72,13 +84,10 @@ async function getFansRate() {
       metaCtx += `"${id}","${name}","${img}","${channel}","${official}"\n`;
     }
   }
-  fs.writeFileSync("test-meta.csv", metaCtx, "utf-8");
-  fs.writeFileSync("test.csv", ctx, "utf-8");
+  fs.writeFileSync(dataPath, ctx, "utf-8");
+  fs.writeFileSync(metaPath, metaCtx, "utf-8");
+  console.log("Finished!");
 }
-
-(async () => {
-  await getFansRate();
-})();
 
 function progress(count, startTime, len) {
   count += 1;
@@ -93,3 +102,7 @@ function progress(count, startTime, len) {
   }
   return count;
 }
+
+(async () => {
+  await getFansRate();
+})();

@@ -1,19 +1,22 @@
 const getClient = require("./db");
 class AuthorDataLoader {
   async loader(mid, collectionName, one) {
-    let hint;
-    if (collectionName == "author") {
-      hint = "mid_1";
-    } else {
-      hint = "idx_mid_datetime";
+    let url = process.env.BILIOB_MONGO_URL;
+    if (collectionName == 'author_data') {
+      url = 'mongodb://localhost:27017'
     }
-    let client = await getClient();
+    let client = await getClient(url);
     let coll = client.db("biliob").collection(collectionName);
     let data;
     if (one) {
       data = await coll.findOne({ mid: mid });
     } else {
-      data = await coll.find({ mid: mid }).toArray();
+      try {
+        data = await coll.find({ mid: mid }).hint("idx_mid_datetime").toArray();
+      } catch (e) {
+        console.log(e);
+        console.log(mid);
+      }
     }
     client.close();
     return data;

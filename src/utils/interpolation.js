@@ -14,8 +14,9 @@ class Interpolation {
       .clamp(true)
       .interpolate(d3.interpolateRound);
     let zero = dateList[0].getTime();
+    // 如果是新入
     if (inter(zero + 86400000) - inter(zero) > valueList[0]) {
-      console.log(data[0].mid);
+      console.log(`New Author: ${data[0].mid}`);
       inter = d3
         .scaleLinear()
         .domain(_.concat([new Date(zero - 86400000)], dateList))
