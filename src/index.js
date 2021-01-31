@@ -7,26 +7,27 @@ const adl = require("./utils/author-data-loader");
 const int = require("./utils/interpolation");
 
 async function getFansRate() {
-  let dataPath = "./fans-decrease-data.csv";
-  let metaPath = "./fans-decrease-meta.csv";
+  let dataPath = "./fans-desc-data.csv";
+  let metaPath = "./fans-desc-meta.csv";
   // 变化率统计范围
-  let dayDelta = 1;
+  let dayDelta = 7;
   // 每组数据的间隔
-  let deltaDay = 0.25;
-  let sort = "asc";
+  let deltaDay = 1;
+  let sort = "desc";
 
-  let startDate = Date.UTC(2020, 8, 16);
+  let startDate = Date.UTC(2020, 11, 1);
   // let startDate = new Date(+new Date() - 86400 * 1000 * 7);
 
-  let endDate = Date.UTC(2020, 9, 16);
+  let endDate = Date.UTC(2021, 0, 31);
   mf.startDate = startDate;
   mf.endDate = endDate;
   let midList = await mf.listTopRateAuthorByDay(sort);
+  // const midList = await mf.listPowerUp2020();
   let len = midList.length;
   let count = 0;
   let result = [];
   let startTime = new Date().getTime();
-  await async.eachOfLimit(midList, 4, async (mid) => {
+  await async.eachOfLimit(midList, 8, async (mid) => {
     let data = await adl.loadDataByMid(mid);
     let inter = int.getInter(
       data,
@@ -47,13 +48,22 @@ async function getFansRate() {
   while (cDate < endDate) {
     let data = _(result)
       .map((d) => {
-        d.value = d.data(cDate) - d.data(cDate - 86400 * 1000 * dayDelta);
+        let dataList = _.range(
+          cDate - 86400 * 1000 * dayDelta,
+          cDate,
+          deltaDay * 86400 * 1000
+        ).map((t) => d.data(t));
+        if (sort == "asc") {
+          d.value = d.data(cDate) - _.max(dataList);
+        } else {
+          d.value = d.data(cDate) - _.min(dataList);
+        }
         return d;
       })
       .orderBy(function (a) {
         return a.value;
       }, sort)
-      .take(25)
+      .take(100)
       .value();
     for (let eachData of data) {
       let id = eachData.mid;

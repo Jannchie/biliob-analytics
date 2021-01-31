@@ -2,17 +2,61 @@ const getClient = require("./db");
 class AuthorDataLoader {
   async loader(mid, collectionName, one) {
     let url = process.env.BILIOB_MONGO_URL;
-    if (collectionName == 'author_data') {
-      url = 'mongodb://localhost:27017'
+    if (collectionName == "author_data") {
+      url = "mongodb://localhost:27777";
     }
-    let client = await getClient(url);
+    let client = null;
+    while (client == null) {
+      try {
+        client = await getClient(url);
+      } catch {}
+    }
     let coll = client.db("biliob").collection(collectionName);
     let data;
     if (one) {
       data = await coll.findOne({ mid: mid });
     } else {
       try {
-        data = await coll.find({ mid: mid }).hint("idx_mid_datetime").toArray();
+        if (collectionName == "author_data") {
+          data = await coll
+            .aggregate([
+              {
+                $match: {
+                  mid: mid,
+                },
+              },
+              {
+                $addFields: {
+                  date: {
+                    $dateToString: {
+                      format: "%Y-%m-%d %H",
+                      date: "$datetime",
+                    },
+                  },
+                },
+              },
+              {
+                $group: {
+                  _id: "$date",
+                  fans: {
+                    $last: "$fans",
+                  },
+                  mid: {
+                    $last: "$mid",
+                  },
+                  datetime: {
+                    $last: "$datetime",
+                  },
+                },
+              },
+            ])
+            .toArray();
+        } else {
+          data = await coll
+            .find({ mid: mid })
+            // .hint("idx_mid_datetime")
+            .toArray();
+        }
       } catch (e) {
         console.log(e);
         console.log(mid);
@@ -23,10 +67,18 @@ class AuthorDataLoader {
   }
 
   async loadDataByMid(mid) {
-    return await this.loader(mid, "author_data");
+    try {
+      return await this.loader(mid, "author_data");
+    } catch {
+      return await this.loadDataByMid(mid);
+    }
   }
   async loadInfoByMid(mid) {
-    return await this.loader(mid, "author", true);
+    try {
+      return await this.loader(mid, "author", true);
+    } catch {
+      return await loadInfoByMid(mid);
+    }
   }
 }
 let authorDataLoader = new AuthorDataLoader();
